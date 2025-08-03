@@ -1,12 +1,15 @@
 import streamlit as st
 import pandas as pd
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt
+import os
+import json
+from oauth2client.service_account import ServiceAccountCredentials
 
-# Koneksi ke Google Sheets
+# --- Koneksi ke Google Sheets ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("agustusanpkl.json", scope)
+json_key = os.environ.get("GOOGLE_SERVICE_ACCOUNT")
+creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(json_key), scope)
 client = gspread.authorize(creds)
 sheet = client.open("Pendaftaran_Lomba").sheet1
 
@@ -14,7 +17,7 @@ CSV_FILE = "data_peserta.csv"
 
 st.title("📋 Pendaftaran Lomba Agustusan Desa")
 
-# FORM PENDAFTARAN
+# --- FORM PENDAFTARAN ---
 with st.form("form_pendaftaran"):
     nama = st.text_input("Nama")
     umur = st.number_input("Umur", 5, 100)
@@ -35,7 +38,7 @@ with st.form("form_pendaftaran"):
         df.to_csv(CSV_FILE, index=False)
         st.success("✅ Data berhasil disimpan!")
 
-# TAMPILKAN PESERTA
+# --- TAMPILKAN PESERTA ---
 if st.button("📑 Tampilkan Semua Peserta"):
     try:
         df = pd.read_csv(CSV_FILE)
@@ -43,7 +46,7 @@ if st.button("📑 Tampilkan Semua Peserta"):
     except:
         st.warning("⚠️ Belum ada data peserta.")
 
-# INPUT NILAI
+# --- INPUT NILAI ---
 st.header("🏅 Input Nilai Peserta")
 try:
     df = pd.read_csv(CSV_FILE)
@@ -56,7 +59,7 @@ try:
 except:
     st.info("Belum ada data untuk dinilai.")
 
-# PEMILIHAN JUARA
+# --- PEMILIHAN JUARA ---
 st.header("🏆 Juara per Lomba")
 if st.button("🎉 Tampilkan Juara"):
     try:
@@ -67,7 +70,7 @@ if st.button("🎉 Tampilkan Juara"):
     except:
         st.warning("⚠️ Data belum lengkap.")
 
-# GRAFIK JUMLAH PESERTA PER LOMBA
+# --- GRAFIK JUMLAH PESERTA PER LOMBA ---
 st.header("📊 Grafik Jumlah Peserta per Lomba")
 try:
     df = pd.read_csv(CSV_FILE)
