@@ -16,7 +16,7 @@ else:
         "private_key_id": "ee9d839111c388cdc3f331375c1df864e4f4f34a",
         "private_key": """-----BEGIN PRIVATE KEY-----
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC3SAWqXiGdatuL
-... (isi aman disensor)
+... (isi disensor)
 VrleKw==
 -----END PRIVATE KEY-----""",
         "client_email": "streamlit-access@agustusanpkl.iam.gserviceaccount.com",
@@ -68,6 +68,14 @@ try:
     df = pd.read_csv(CSV_FILE)
     st.dataframe(df)
 
+    # Tombol Unduh CSV
+    st.download_button(
+        "⬇️ Unduh Data CSV",
+        df.to_csv(index=False),
+        file_name="data_peserta.csv",
+        mime="text/csv"
+    )
+
     # --- Fitur Edit ---
     st.markdown("### ✏️ Edit Data")
     selected_name = st.selectbox("Pilih Nama untuk Diedit", df["Nama"].unique())
@@ -80,14 +88,32 @@ try:
         if st.button("💾 Simpan Perubahan"):
             df.loc[df["Nama"] == selected_name, ["Umur", "RT/RW", "Lomba"]] = [new_umur, new_rtrw, new_lomba]
             df.to_csv(CSV_FILE, index=False)
+
+            try:
+                sheet.clear()
+                sheet.append_row(["Nama", "Umur", "RT/RW", "Lomba", "Nilai"])
+                for i in df.values.tolist():
+                    sheet.append_row(i)
+            except Exception as e:
+                st.error(f"Gagal update Google Sheets: {e}")
+
             st.success("✅ Data berhasil diubah!")
 
     # --- Fitur Hapus ---
     st.markdown("### 🗑️ Hapus Data")
-    nama_hapus = st.selectbox("Pilih Nama untuk Dihapus", df["Nama"].unique())
+    nama_hapus = st.selectbox("Pilih Nama untuk Dihapus", df["Nama"].unique(), key="hapus")
     if st.button("Hapus Peserta"):
         df = df[df["Nama"] != nama_hapus]
         df.to_csv(CSV_FILE, index=False)
+
+        try:
+            sheet.clear()
+            sheet.append_row(["Nama", "Umur", "RT/RW", "Lomba", "Nilai"])
+            for i in df.values.tolist():
+                sheet.append_row(i)
+        except Exception as e:
+            st.error(f"Gagal update Google Sheets: {e}")
+
         st.success(f"✅ Data peserta '{nama_hapus}' telah dihapus!")
 
 except:
@@ -102,6 +128,15 @@ try:
     if st.button("💾 Simpan Nilai"):
         df.loc[df["Nama"] == nama_pilih, "Nilai"] = nilai
         df.to_csv(CSV_FILE, index=False)
+
+        try:
+            sheet.clear()
+            sheet.append_row(["Nama", "Umur", "RT/RW", "Lomba", "Nilai"])
+            for i in df.values.tolist():
+                sheet.append_row(i)
+        except Exception as e:
+            st.error(f"Gagal update Google Sheets: {e}")
+
         st.success("✅ Nilai berhasil disimpan!")
 except:
     st.info("Belum ada data untuk dinilai.")
