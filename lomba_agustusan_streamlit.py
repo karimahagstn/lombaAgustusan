@@ -8,18 +8,16 @@ import json
 # --- Konfigurasi kredensial Google (LOCAL / Streamlit Cloud) ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-# Jika dijalankan di Streamlit Cloud (pakai st.secrets)
 if "google_service_account" in st.secrets:
     creds_dict = dict(st.secrets["google_service_account"])
 else:
-    # Jika dijalankan lokal, bisa diganti dengan data kredensial dari secrets.toml atau file json
     creds_dict = {
         "type": "service_account",
         "project_id": "agustusanpkl",
         "private_key_id": "ee9d839111c388cdc3f331375c1df864e4f4f34a",
         "private_key": """-----BEGIN PRIVATE KEY-----
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC3SAWqXiGdatuL
-... (isi disensor untuk keamanan)
+... (isi aman disensor)
 VrleKw==
 -----END PRIVATE KEY-----""",
         "client_email": "streamlit-access@agustusanpkl.iam.gserviceaccount.com",
@@ -44,19 +42,12 @@ with st.form("form_pendaftaran"):
     umur = st.number_input("Umur", 5, 100)
     rt = st.text_input("RT")
     rw = st.text_input("RW")
-
-    lomba_pilihan = ["Balap Karung", "Makan Kerupuk", "Tarik Tambang", "Lainnya..."]
-    pilihan = st.selectbox("Pilih Perlombaan", options=lomba_pilihan)
-
-    if pilihan == "Lainnya...":
-        lomba = st.text_input("Masukkan Nama Perlombaan Lainnya")
-    else:
-        lomba = pilihan
+    lomba = st.text_input("Nama Perlombaan (Bebas diisi)")
 
     submit = st.form_submit_button("Simpan")
 
-    if submit and nama:
-        row = [nama, umur, f"{rt}/{rw}", lomba, 0]
+    if submit and nama and lomba.strip():
+        row = [nama, umur, f"{rt}/{rw}", lomba.strip(), 0]
 
         try:
             sheet.append_row(row)
@@ -94,17 +85,14 @@ except:
 
 # --- PEMILIHAN JUARA ---
 st.header("🏆 Juara per Lomba")
-jumlah_juara = st.selectbox("Berapa banyak juara per lomba?", options=[1, 2, 3, 5], index=2)  # Default: 3
-
 if st.button("🎉 Tampilkan Juara"):
     try:
         df = pd.read_csv(CSV_FILE)
         juara_df = df.sort_values(by=["Lomba", "Nilai"], ascending=[True, False])
-        juara_per_lomba = juara_df.groupby("Lomba").head(jumlah_juara)
+        juara_per_lomba = juara_df.groupby("Lomba").head(3)
         st.dataframe(juara_per_lomba)
     except:
         st.warning("⚠️ Data belum lengkap.")
-
 
 # --- GRAFIK JUMLAH PESERTA PER LOMBA ---
 st.header("📊 Grafik Jumlah Peserta per Lomba")
