@@ -2,19 +2,40 @@ import streamlit as st
 import pandas as pd
 import gspread
 import matplotlib.pyplot as plt
-import os
-import json
 from oauth2client.service_account import ServiceAccountCredentials
+import json
 
-# --- Koneksi ke Google Sheets ---
+# --- Konfigurasi kredensial Google (LOCAL / Streamlit Cloud) ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-json_key = os.environ.get("GOOGLE_SERVICE_ACCOUNT")
-creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(json_key), scope)
+
+# Jika dijalankan di Streamlit Cloud (pakai st.secrets)
+if "google_service_account" in st.secrets:
+    creds_dict = dict(st.secrets["google_service_account"])
+else:
+    # Jika dijalankan lokal, bisa diganti dengan data kredensial dari secrets.toml atau file json
+    creds_dict = {
+        "type": "service_account",
+        "project_id": "agustusanpkl",
+        "private_key_id": "ee9d839111c388cdc3f331375c1df864e4f4f34a",
+        "private_key": """-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC3SAWqXiGdatuL
+... (isi disensor untuk keamanan)
+VrleKw==
+-----END PRIVATE KEY-----""",
+        "client_email": "streamlit-access@agustusanpkl.iam.gserviceaccount.com",
+        "client_id": "108305191571808927807",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/streamlit-access%40agustusanpkl.iam.gserviceaccount.com",
+        "universe_domain": "googleapis.com"
+    }
+
+creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_service_account"], scope)
 client = gspread.authorize(creds)
 sheet = client.open("Pendaftaran_Lomba").sheet1
 
 CSV_FILE = "data_peserta.csv"
-
 st.title("📋 Pendaftaran Lomba Agustusan Desa")
 
 # --- FORM PENDAFTARAN ---
@@ -28,7 +49,11 @@ with st.form("form_pendaftaran"):
 
     if submit and nama:
         row = [nama, umur, f"{rt}/{rw}", lomba, 0]
-        sheet.append_row(row)  # Simpan ke Google Sheets
+
+        try:
+            sheet.append_row(row)
+        except Exception as e:
+            st.error(f"Gagal menyimpan ke Google Sheets: {e}")
 
         try:
             df = pd.read_csv(CSV_FILE)
