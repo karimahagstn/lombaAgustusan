@@ -5,9 +5,8 @@ import matplotlib.pyplot as plt
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 
-# --- Konfigurasi kredensial Google (LOCAL / Streamlit Cloud) ---
+# --- Konfigurasi kredensial Google Sheets ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
 if "google_service_account" in st.secrets:
     creds_dict = dict(st.secrets["google_service_account"])
 else:
@@ -34,6 +33,7 @@ client = gspread.authorize(creds)
 sheet = client.open("Pendaftaran_Lomba").sheet1
 
 CSV_FILE = "data_peserta.csv"
+
 st.title("📋 Pendaftaran Lomba Agustusan Desa")
 
 # --- FORM PENDAFTARAN ---
@@ -42,7 +42,7 @@ with st.form("form_pendaftaran"):
     umur = st.number_input("Umur", 5, 100)
     rt = st.text_input("RT")
     rw = st.text_input("RW")
-    lomba = st.text_input("Nama Perlombaan (Bebas diisi)")
+    lomba = st.text_input("Nama Perlombaan (bebas diisi)")
 
     submit = st.form_submit_button("Simpan")
 
@@ -62,19 +62,42 @@ with st.form("form_pendaftaran"):
         df.to_csv(CSV_FILE, index=False)
         st.success("✅ Data berhasil disimpan!")
 
-# --- TAMPILKAN PESERTA ---
-if st.button("📑 Tampilkan Semua Peserta"):
-    try:
-        df = pd.read_csv(CSV_FILE)
-        st.dataframe(df)
-    except:
-        st.warning("⚠️ Belum ada data peserta.")
+# --- TAMPILKAN & KELOLA PESERTA ---
+st.subheader("📑 Data Peserta")
+try:
+    df = pd.read_csv(CSV_FILE)
+    st.dataframe(df)
+
+    # --- Fitur Edit ---
+    st.markdown("### ✏️ Edit Data")
+    selected_name = st.selectbox("Pilih Nama untuk Diedit", df["Nama"].unique())
+    if selected_name:
+        selected_data = df[df["Nama"] == selected_name].iloc[0]
+        new_umur = st.number_input("Edit Umur", 5, 100, int(selected_data["Umur"]))
+        new_rtrw = st.text_input("Edit RT/RW", selected_data["RT/RW"])
+        new_lomba = st.text_input("Edit Lomba", selected_data["Lomba"])
+
+        if st.button("💾 Simpan Perubahan"):
+            df.loc[df["Nama"] == selected_name, ["Umur", "RT/RW", "Lomba"]] = [new_umur, new_rtrw, new_lomba]
+            df.to_csv(CSV_FILE, index=False)
+            st.success("✅ Data berhasil diubah!")
+
+    # --- Fitur Hapus ---
+    st.markdown("### 🗑️ Hapus Data")
+    nama_hapus = st.selectbox("Pilih Nama untuk Dihapus", df["Nama"].unique())
+    if st.button("Hapus Peserta"):
+        df = df[df["Nama"] != nama_hapus]
+        df.to_csv(CSV_FILE, index=False)
+        st.success(f"✅ Data peserta '{nama_hapus}' telah dihapus!")
+
+except:
+    st.warning("⚠️ Belum ada data peserta.")
 
 # --- INPUT NILAI ---
 st.header("🏅 Input Nilai Peserta")
 try:
     df = pd.read_csv(CSV_FILE)
-    nama_pilih = st.selectbox("Pilih Peserta", df["Nama"].unique())
+    nama_pilih = st.selectbox("Pilih Peserta", df["Nama"].unique(), key="nilai")
     nilai = st.slider("Nilai", 0, 100)
     if st.button("💾 Simpan Nilai"):
         df.loc[df["Nama"] == nama_pilih, "Nilai"] = nilai
