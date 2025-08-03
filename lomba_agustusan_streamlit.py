@@ -31,7 +31,7 @@ VrleKw==
         "universe_domain": "googleapis.com"
     }
 
-creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_service_account"], scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("Pendaftaran_Lomba").sheet1
 
@@ -44,7 +44,15 @@ with st.form("form_pendaftaran"):
     umur = st.number_input("Umur", 5, 100)
     rt = st.text_input("RT")
     rw = st.text_input("RW")
-    lomba = st.selectbox("Pilih Lomba", ["Balap Karung", "Makan Kerupuk", "Tarik Tambang", "Panjat Pinang"])
+
+    lomba_pilihan = ["Balap Karung", "Makan Kerupuk", "Tarik Tambang", "Lainnya..."]
+    pilihan = st.selectbox("Pilih Perlombaan", options=lomba_pilihan)
+
+    if pilihan == "Lainnya...":
+        lomba = st.text_input("Masukkan Nama Perlombaan Lainnya")
+    else:
+        lomba = pilihan
+
     submit = st.form_submit_button("Simpan")
 
     if submit and nama:
@@ -86,14 +94,17 @@ except:
 
 # --- PEMILIHAN JUARA ---
 st.header("🏆 Juara per Lomba")
+jumlah_juara = st.selectbox("Berapa banyak juara per lomba?", options=[1, 2, 3, 5], index=2)  # Default: 3
+
 if st.button("🎉 Tampilkan Juara"):
     try:
         df = pd.read_csv(CSV_FILE)
         juara_df = df.sort_values(by=["Lomba", "Nilai"], ascending=[True, False])
-        juara_per_lomba = juara_df.groupby("Lomba").head(3)
+        juara_per_lomba = juara_df.groupby("Lomba").head(jumlah_juara)
         st.dataframe(juara_per_lomba)
     except:
         st.warning("⚠️ Data belum lengkap.")
+
 
 # --- GRAFIK JUMLAH PESERTA PER LOMBA ---
 st.header("📊 Grafik Jumlah Peserta per Lomba")
