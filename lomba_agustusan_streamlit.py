@@ -13,14 +13,10 @@ else:
     creds_dict = {
         "type": "service_account",
         "project_id": "agustusanpkl",
-        "private_key_id": "ee9d839111c388cdc3f331375c1df864e4f4f34a",
-        "private_key": """-----BEGIN PRIVATE KEY-----
-MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC3SAWqXiGdatuL
-... (isi disensor)
-VrleKw==
------END PRIVATE KEY-----""",
+        "private_key_id": "xxx",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nXXX\n-----END PRIVATE KEY-----\n",
         "client_email": "streamlit-access@agustusanpkl.iam.gserviceaccount.com",
-        "client_id": "108305191571808927807",
+        "client_id": "xxx",
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
@@ -40,14 +36,15 @@ st.title("📋 Pendaftaran Lomba Agustusan Desa")
 with st.form("form_pendaftaran"):
     nama = st.text_input("Nama")
     umur = st.number_input("Umur", 5, 100)
-    rt = st.number_input("RT", min_value=1, step=1)
-    rw = st.number_input("RW", min_value=1, step=1)
-    lomba = st.text_input("Nama Perlombaan (bebas diisi)")
+    rt = st.text_input("RT (contoh: 04)")
+    rw = st.text_input("RW (contoh: 01)")
+    lomba = st.text_input("Nama Perlombaan")
 
     submit = st.form_submit_button("Simpan")
 
     if submit and nama and lomba.strip():
-        row = [nama, umur, f"{rt}/{rw}", lomba.strip(), 0]
+        rtrw = f"'{rt.strip()}/{rw.strip()}"  # Menambahkan tanda kutip tunggal agar tidak jadi tanggal di Excel
+        row = [nama, umur, rtrw, lomba.strip(), 0]
 
         try:
             sheet.append_row(row)
@@ -55,20 +52,23 @@ with st.form("form_pendaftaran"):
             st.error(f"Gagal menyimpan ke Google Sheets: {e}")
 
         try:
-            df = pd.read_csv(CSV_FILE)
+            df = pd.read_csv(CSV_FILE, dtype=str)
             df.loc[len(df)] = row
         except:
             df = pd.DataFrame([row], columns=["Nama", "Umur", "RT/RW", "Lomba", "Nilai"])
+
         df.to_csv(CSV_FILE, index=False)
         st.success("✅ Data berhasil disimpan!")
 
 # --- TAMPILKAN & KELOLA PESERTA ---
 st.subheader("📑 Data Peserta")
 try:
-    df = pd.read_csv(CSV_FILE)
+    df = pd.read_csv(CSV_FILE, dtype=str)
+    df["Umur"] = df["Umur"].astype(int)
+    df["Nilai"] = df["Nilai"].astype(int)
     st.dataframe(df)
 
-    # Tombol Unduh CSV
+    # Unduh data
     st.download_button(
         "⬇️ Unduh Data CSV",
         df.to_csv(index=False),
@@ -76,7 +76,7 @@ try:
         mime="text/csv"
     )
 
-    # --- Fitur Edit ---
+    # Edit data
     st.markdown("### ✏️ Edit Data")
     selected_name = st.selectbox("Pilih Nama untuk Diedit", df["Nama"].unique())
     if selected_name:
@@ -86,7 +86,9 @@ try:
         new_lomba = st.text_input("Edit Lomba", selected_data["Lomba"])
 
         if st.button("💾 Simpan Perubahan"):
-            df.loc[df["Nama"] == selected_name, ["Umur", "RT/RW", "Lomba"]] = [new_umur, new_rtrw, new_lomba]
+            df.loc[df["Nama"] == selected_name, ["Umur", "RT/RW", "Lomba"]] = [
+                new_umur, f"'{new_rtrw.strip()}", new_lomba
+            ]
             df.to_csv(CSV_FILE, index=False)
 
             try:
@@ -99,7 +101,7 @@ try:
 
             st.success("✅ Data berhasil diubah!")
 
-    # --- Fitur Hapus ---
+    # Hapus data
     st.markdown("### 🗑️ Hapus Data")
     nama_hapus = st.selectbox("Pilih Nama untuk Dihapus", df["Nama"].unique(), key="hapus")
     if st.button("Hapus Peserta"):
@@ -122,7 +124,9 @@ except:
 # --- INPUT NILAI ---
 st.header("🏅 Input Nilai Peserta")
 try:
-    df = pd.read_csv(CSV_FILE)
+    df = pd.read_csv(CSV_FILE, dtype=str)
+    df["Umur"] = df["Umur"].astype(int)
+    df["Nilai"] = df["Nilai"].astype(int)
     nama_pilih = st.selectbox("Pilih Peserta", df["Nama"].unique(), key="nilai")
     nilai = st.slider("Nilai", 0, 100)
     if st.button("💾 Simpan Nilai"):
@@ -145,17 +149,18 @@ except:
 st.header("🏆 Juara per Lomba")
 if st.button("🎉 Tampilkan Juara"):
     try:
-        df = pd.read_csv(CSV_FILE)
+        df = pd.read_csv(CSV_FILE, dtype=str)
+        df["Nilai"] = df["Nilai"].astype(int)
         juara_df = df.sort_values(by=["Lomba", "Nilai"], ascending=[True, False])
         juara_per_lomba = juara_df.groupby("Lomba").head(3)
         st.dataframe(juara_per_lomba)
     except:
         st.warning("⚠️ Data belum lengkap.")
 
-# --- GRAFIK JUMLAH PESERTA PER LOMBA ---
+# --- GRAFIK ---
 st.header("📊 Grafik Jumlah Peserta per Lomba")
 try:
-    df = pd.read_csv(CSV_FILE)
+    df = pd.read_csv(CSV_FILE, dtype=str)
     peserta_per_lomba = df["Lomba"].value_counts()
     fig, ax = plt.subplots()
     peserta_per_lomba.plot(kind='bar', color='skyblue', ax=ax)
