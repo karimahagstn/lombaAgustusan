@@ -40,8 +40,8 @@ st.title("📋 Pendaftaran Lomba Agustusan Desa")
 with st.form("form_pendaftaran"):
     nama = st.text_input("Nama")
     umur = st.number_input("Umur", 5, 100)
-    rt = st.text_input("RT")
-    rw = st.text_input("RW")
+    rt = st.number_input("RT", min_value=1, step=1)
+    rw = st.number_input("RW", min_value=1, step=1)
     lomba = st.text_input("Nama Perlombaan (bebas diisi)")
 
     submit = st.form_submit_button("Simpan")
